@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>A16 01PA 0004 OOG · Digital Twin — Blow Mold Licor Barrica 750 ml</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  :root{
+    --bg:#0A0B0D; --panel:#101216; --panel2:#15181D; --line:#23262C;
+    --gold:#C4A468; --gold-dim:#8A744C; --ink:#E8E6E1; --ink-dim:#9BA0A8; --ink-faint:#5C616A;
+    --doc:#C4A468; --inf:#6E7683; --hot:#E36C3A; --ok:#4C9A6E;
+    --glass:rgba(16,18,22,.88); --glass-solid:rgba(16,18,22,.94);
+    --hdr-fade:linear-gradient(180deg,rgba(10,11,13,.94),rgba(10,11,13,0));
+    --shadow:none;
+    --mono:'JetBrains Mono',monospace; --disp:'Space Grotesk',sans-serif; --body:'Inter',sans-serif;
+  }
+  /* ---------- TEMA CLARO — vellum de prancheta ---------- */
+  body.light{
+    --bg:#E7E8E3; --panel:#FFFFFF; --panel2:#F3F4F0; --line:#C6C9C2;
+    --gold:#7A6230; --gold-dim:#9A8046; --ink:#14171B; --ink-dim:#525963; --ink-faint:#8B9299;
+    --doc:#7A6230; --inf:#6B7381; --hot:#C24A16; --ok:#2E7A52;
+    --glass:rgba(255,255,255,.9); --glass-solid:rgba(255,255,255,.96);
+    --hdr-fade:linear-gradient(180deg,rgba(231,232,227,.96),rgba(231,232,227,0));
+    --shadow:0 2px 14px rgba(20,23,27,.10);
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:auto}
+  body{background:var(--bg);color:var(--ink);font-family:var(--body);overflow-x:hidden}
+  #scrolltrack{height:720vh;position:relative;z-index:1;pointer-events:none}
+  #stage{position:fixed;inset:0;z-index:0}
+  canvas{display:block}
+
+  /* ---------- HUD chrome ---------- */
+  .hud{position:fixed;z-index:5;pointer-events:none}
+  #hdr{top:0;left:0;right:0;padding:18px 22px;display:flex;justify-content:space-between;align-items:flex-start;
+       background:var(--hdr-fade);}
+  .eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.22em;color:var(--gold);text-transform:uppercase}
+  #hdr h1{font-family:var(--disp);font-size:clamp(15px,2vw,20px);font-weight:600;letter-spacing:.01em;margin-top:4px}
+  #hdr .sub{font-family:var(--mono);font-size:10.5px;color:var(--ink-dim);margin-top:3px}
+  #hdr .sub b{color:var(--ink);font-weight:500}
+  #status{text-align:right;font-family:var(--mono);font-size:10px;color:var(--ink-dim);line-height:1.7}
+  #status .op{color:var(--ok)}
+  #status .op::before{content:'●';margin-right:6px;font-size:8px;animation:blink 2.4s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+  #prov{margin-top:6px;padding:5px 9px;border:1px solid var(--line);background:var(--glass);border-radius:3px;display:inline-block}
+  #prov .d{color:var(--gold)} #prov .i{color:var(--inf)}
+
+  /* ---------- caption (scroll narrative) ---------- */
+  #caption{bottom:26px;left:22px;max-width:min(430px,72vw)}
+  #caption .ph{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--gold);text-transform:uppercase;margin-bottom:7px;transition:opacity .3s}
+  #caption h2{font-family:var(--disp);font-size:clamp(18px,2.6vw,26px);font-weight:600;line-height:1.15;margin-bottom:8px;transition:opacity .3s}
+  #caption p{font-size:12.5px;line-height:1.55;color:var(--ink-dim);transition:opacity .3s}
+  #caption .note{font-family:var(--mono);font-size:10px;color:var(--gold-dim);margin-top:8px;border-left:2px solid var(--gold-dim);padding-left:8px;line-height:1.5}
+  #scrollhint{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:14px;letter-spacing:.12em}
+  #scrollhint .arr{display:inline-block;animation:bounce 1.6s infinite}
+  @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
+
+  /* ---------- phase rail ---------- */
+  #rail{right:14px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:14px;pointer-events:auto}
+  .tick{width:8px;height:8px;border:1px solid var(--ink-faint);border-radius:50%;cursor:pointer;position:relative;transition:.25s}
+  .tick.on{background:var(--gold);border-color:var(--gold);box-shadow:0 0 10px rgba(196,164,104,.5)}
+  .tick:hover::after{content:attr(data-t);position:absolute;right:16px;top:-4px;font-family:var(--mono);font-size:9.5px;
+    color:var(--ink);background:var(--panel);border:1px solid var(--line);padding:3px 7px;white-space:nowrap;border-radius:3px}
+
+  /* ---------- toolbar ---------- */
+  #tools{bottom:26px;right:22px;display:flex;flex-direction:column;align-items:flex-end;gap:8px;pointer-events:auto}
+  .tgroup{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .btn{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;color:var(--ink-dim);background:var(--glass);box-shadow:var(--shadow);
+       border:1px solid var(--line);padding:7px 11px;border-radius:3px;cursor:pointer;transition:.2s;backdrop-filter:blur(6px)}
+  .btn:hover{color:var(--ink);border-color:var(--gold-dim)}
+  .btn.on{color:var(--gold);border-color:var(--gold);background:rgba(196,164,104,.08)}
+  .btn.pulse{border-color:var(--hot);color:var(--hot)}
+  .mlabel{font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--ink-faint);text-transform:uppercase}
+
+  /* ---------- spec card ---------- */
+  #card{position:fixed;z-index:6;left:22px;top:96px;width:min(360px,86vw);background:var(--glass-solid);box-shadow:var(--shadow);
+        border:1px solid var(--line);border-top:2px solid var(--gold);border-radius:4px;padding:16px 16px 13px;
+        backdrop-filter:blur(10px);display:none;pointer-events:auto;max-height:min(62vh,560px);overflow:auto}
+  #card.show{display:block;animation:up .25s ease}
+  @keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  #card .cid{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;color:var(--gold);text-transform:uppercase}
+  #card h3{font-family:var(--disp);font-size:16px;font-weight:600;margin:4px 0 10px}
+  #card .close{position:absolute;top:10px;right:12px;cursor:pointer;color:var(--ink-faint);font-size:15px;line-height:1}
+  #card .close:hover{color:var(--ink)}
+  .spec{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:12px}
+  .spec:last-of-type{border-bottom:none}
+  .spec .k{color:var(--ink-dim);flex:1}
+  .spec .v{font-family:var(--mono);font-size:11.5px;text-align:right;color:var(--ink)}
+  .badge{font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;padding:2px 5px;border-radius:2px;margin-left:6px;vertical-align:1px}
+  .badge.doc{color:var(--gold);border:1px solid var(--gold-dim)}
+  .badge.inf{color:var(--inf);border:1px solid var(--inf)}
+  #card .src{font-family:var(--mono);font-size:9.5px;color:var(--ink-faint);margin-top:10px;line-height:1.5;border-top:1px dashed var(--line);padding-top:8px}
+  #card .src b{color:var(--gold-dim);font-weight:500}
+
+  /* ---------- maintenance list ---------- */
+  #mlist{position:fixed;z-index:6;right:22px;top:96px;width:min(300px,80vw);background:var(--glass-solid);box-shadow:var(--shadow);
+         border:1px solid var(--line);border-radius:4px;padding:14px;display:none;pointer-events:auto;backdrop-filter:blur(10px)}
+  #mlist.show{display:block;animation:up .25s ease}
+  #mlist h4{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--gold);text-transform:uppercase;margin-bottom:10px}
+  .mstep{display:flex;gap:10px;padding:7px 6px;border-radius:3px;cursor:pointer;font-size:12px;color:var(--ink-dim);transition:.15s}
+  .mstep:hover{background:rgba(196,164,104,.07);color:var(--ink)}
+  .mstep.act{background:rgba(196,164,104,.12);color:var(--ink)}
+  .mstep .n{font-family:var(--mono);color:var(--gold);font-size:11px;min-width:18px}
+  .mstep .torque{font-family:var(--mono);font-size:9.5px;color:var(--ink-faint);display:block;margin-top:2px}
+
+  ::-webkit-scrollbar{width:9px}
+  ::-webkit-scrollbar-track{background:var(--bg)}
+  body.light #caption,body.light #hdr{text-shadow:0 1px 3px rgba(231,232,227,.95),0 0 10px rgba(231,232,227,.7)}
+  body.light .tick{border-color:#9AA0A6}
+  body.light .btn.on{background:rgba(122,98,48,.10)}
+  body.light .tick.on{box-shadow:0 0 8px rgba(122,98,48,.45)}
+  body.light .mstep:hover{background:rgba(122,98,48,.08)}
+  body.light .mstep.act{background:rgba(122,98,48,.13)}
+  body,#stage,.btn,#card,#mlist,#prov{transition:background-color .35s ease,color .35s ease,border-color .35s ease}
+  ::-webkit-scrollbar-thumb{background:var(--line);border-radius:5px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--gold-dim)}
+  @media (max-width:720px){
+    #tools{bottom:90px}
+    #caption{bottom:16px;max-width:82vw}
+    #caption p{font-size:11.5px}
+    #rail{right:8px}
+    #status{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+<div id="scrolltrack"></div>
+<div id="stage"></div>
+
+<header class="hud" id="hdr">
+  <div>
+    <div class="eyebrow">SomaVerso · Forja / Digital Twin</div>
+    <h1>A16 01PA 0004 OOG <span style="color:var(--ink-faint);font-weight:400">· REV 0</span></h1>
+    <div class="sub"><b>BLOW MOLD — LICOR BARRICA 750 ml</b> · Parglass Indústria de Vidros · FoFo Cinzento “Q3” · Máq. 6¼" · Equip. 6⅝" · Mont. 53 · Invert 100</div>
+  </div>
+  <div id="status">
+    <div class="op">GÊMEO DIGITAL OPERACIONAL</div>
+    <div>DES: MENEGASSI · 10-MAI-2026 · ESC 1:2</div>
+    <div id="prov">PROVENIÊNCIA&nbsp; <span class="d">■ 84% DOCUMENTADO</span>&nbsp; <span class="i">□ 16% INFERIDO</span></div>
+  </div>
+</header>
+
+<div class="hud" id="caption">
+  <div class="ph" id="capPh">FASE 01 / 07</div>
+  <h2 id="capH">Ferramental montado</h2>
+  <p id="capP">Molde de sopro em ferro fundido cinzento Q3, Ø202 mm, altura total 314,5 mm. Metades macho e fêmea fechadas no plano de junta. Arraste para girar.</p>
+  <div class="note" id="capN">COTAS SEM TOLERÂNCIA: ±0,1 mm · USINAGEM N/E: Ra 6,3</div>
+  <div id="scrollhint">ROLE PARA DESMONTAR <span class="arr">▼</span></div>
+</div>
+
+<div class="hud" id="rail"></div>
+
+<div class="hud" id="tools">
+  <div class="mlabel">Visualização</div>
+  <div class="tgroup">
+    <button class="btn on" id="bF">FÊMEA</button>
+    <button class="btn on" id="bM">MACHO</button>
+    <button class="btn" id="bSec">SEÇÃO</button>
+    <button class="btn" id="bXr">RAIO-X VÁCUO</button>
+    <button class="btn" id="bRot">AUTO-GIRO</button>
+    <button class="btn" id="bTheme">◐ MODO CLARO</button>
+  </div>
+  <div class="mlabel">Modos de operação</div>
+  <div class="tgroup">
+    <button class="btn" id="bInsp">INSPEÇÃO</button>
+    <button class="btn" id="bManu">MANUTENÇÃO</button>
+    <button class="btn pulse" id="bCiclo">▶ CICLO DE SOPRO</button>
+    <button class="btn" id="bReset">RESET</button>
+  </div>
+</div>
+
+<aside id="card">
+  <span class="close" id="cardX">✕</span>
+  <div class="cid" id="cId"></div>
+  <h3 id="cTitle"></h3>
+  <div id="cSpecs"></div>
+  <div class="src" id="cSrc"></div>
+</aside>
+
+<aside id="mlist">
+  <h4>Ordem de desmontagem</h4>
+  <div id="msteps"></div>
+</aside>
+
+<script>
+/* ================= PALETTE / MATERIALS ================= */
+const C = {
+  iron:0x2B2F36, ironHi:0x363B44, steel:0x8A8F98, steelDk:0x5A6068,
+  gold:0xC4A468, goldDk:0x8A744C, hot:0xE36C3A, glass:0x8FD8CC, cavity:0x4A4F58
+};
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0A0B0D);
+scene.fog = new THREE.Fog(0x0A0B0D, 900, 2100);
+
+const camera = new THREE.PerspectiveCamera(40, innerWidth/innerHeight, 1, 5000);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.localClippingEnabled = true;
+document.getElementById('stage').appendChild(renderer.domElement);
+
+scene.add(new THREE.AmbientLight(0x404550, 1.1));
+const key = new THREE.DirectionalLight(0xFFF4E0, 1.0); key.position.set(420,600,380); scene.add(key);
+const rim = new THREE.DirectionalLight(0x6E86B0, .55); rim.position.set(-500,200,-420); scene.add(rim);
+const under = new THREE.PointLight(0xC4A468, .35, 1200); under.position.set(0,-120,0); scene.add(under);
+const heatLight = new THREE.PointLight(0xE36C3A, 0, 500); heatLight.position.set(0,190,0); scene.add(heatLight);
+
+const clipPlane = new THREE.Plane(new THREE.Vector3(0,0,-1), 0);
+let clippingOn = false;
+
+/* hatch texture — mesmas hachuras do desenho 2D */
+function hatchTex(light){
+  const cv=document.createElement('canvas'); cv.width=cv.height=128;
+  const g=cv.getContext('2d');
+  g.fillStyle = light?'#FBFBF8':'#23262C'; g.fillRect(0,0,128,128);
+  g.strokeStyle = light?'#5E646D':'#3A3F47'; g.lineWidth=1.6;
+  for(let i=-128;i<256;i+=11){ g.beginPath(); g.moveTo(i,128); g.lineTo(i+128,0); g.stroke(); }
+  const t=new THREE.CanvasTexture(cv); t.wrapS=t.wrapT=THREE.RepeatWrapping; return t;
+}
+const HTX_D = hatchTex(false), HTX_L = hatchTex(true);
+let HTX = HTX_D;
+
+function role(m,r){ m.userData.role=r; return m; }
+function mIron(){ return role(new THREE.MeshStandardMaterial({color:C.iron, roughness:.62, metalness:.55, side:THREE.DoubleSide}),'iron'); }
+function mHatch(){ return role(new THREE.MeshStandardMaterial({color:0xBFC4CC, roughness:.85, metalness:.15, map:HTX, side:THREE.DoubleSide}),'hatch'); }
+function mSteel(){ return role(new THREE.MeshStandardMaterial({color:C.steel, roughness:.35, metalness:.85, side:THREE.DoubleSide}),'steel'); }
+function mGold(o=1){ return role(new THREE.MeshStandardMaterial({color:C.gold, roughness:.4, metalness:.7, transparent:o<1, opacity:o, side:THREE.DoubleSide}),'gold'); }
+
+/* ================= PERFIL (mm, y=0 na base, eixo Y) ================= */
+/* Contorno da seção transversal de cada metade — cotas do desenho A16 01PA 0004 */
+const OUTLINE = [
+  [52.5,0],[84.05,0],[84.05,90.1],[101,90.1],[101,314.5],
+  [39.5,314.5],[39.5,302.5],[31,302.5],[31,299.5],
+  [13.0,296.0],[12.4,291.0],[12.4,274.0],[15.0,270.0],[13.4,266.5],   // colo / terminação Ø24.8
+  [18.5,254],[27.0,241],[35.0,229],[40.6,219],[42.02,211],            // ombro ~25°
+  [42.55,186],[42.75,168],[42.55,150],[42.02,132],                    // corpo barrica (Ø84.05→85.5)
+  [40.8,116],[38.6,106.5],[37.55,102.5],[37.55,99.6],                 // base cavidade Ø75.10
+  [42.9,99.6],[42.9,15],[52.5,15],[52.5,9.5]                          // bolso fundo Ø85.8 / Ø105
+];
+const CAV_IDX = [7,26]; // trecho do contorno que é a silhueta da cavidade
+const lathePts = OUTLINE.map(p=>new THREE.Vector2(p[0],p[1]));
+
+/* ================= CONSTRUÇÃO DAS METADES ================= */
+const root = new THREE.Group();        // rotação do usuário
+const mold = new THREE.Group();        // conteúdo
+root.add(mold); scene.add(root);
+mold.position.y = -157;                // centraliza verticalmente
+
+const parts = [];                      // {mesh/group, dir, dist, sub}  — vetores de explosão
+const chanMats = [];                   // materiais do canal de vácuo (recolorem por tema)
+const allMats = [];
+function reg(obj, dir, dist, sub=false){ parts.push({obj, dir:new THREE.Vector3(...dir), dist, sub, home:obj.position.clone()}); }
+function trackMat(m){ allMats.push(m); return m; }
+
+function buildHalf(sideSign){ // -1 = fêmea (x<0), +1 = macho (x>0)
+  const g = new THREE.Group();
+  const phiStart = sideSign<0 ? Math.PI : 0;
+
+  // casco revolucionado (superfícies externas + cavidade)
+  const lat = new THREE.Mesh(new THREE.LatheGeometry(lathePts, 96, phiStart, Math.PI), trackMat(mIron()));
+  g.add(lat);
+
+  // faces do plano de junta (com hachura técnica)
+  const mkFace = (mirror)=>{
+    const sh = new THREE.Shape(OUTLINE.map(p=>new THREE.Vector2(p[0]*mirror, p[1])));
+    const geo = new THREE.ShapeGeometry(sh);
+    const mat = trackMat(mHatch()); mat.map = HTX.clone(); mat.map.needsUpdate=true;
+    mat.map.wrapS=mat.map.wrapT=THREE.RepeatWrapping; mat.map.repeat.set(1/16,1/16);
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.rotation.y = sideSign<0 ? Math.PI/2 : -Math.PI/2;
+    mesh.position.x = sideSign*0.15;
+    return mesh;
+  };
+  g.add(mkFace(1)); g.add(mkFace(-1));
+
+  // canal de vácuo Ø4 no plano de junta (contorno dourado ao redor da cavidade)
+  const off=5.5, chPts=[];
+  for(let i=CAV_IDX[0]; i<=CAV_IDX[1]; i++) chPts.push(new THREE.Vector3(sideSign*0.6, OUTLINE[i][1], OUTLINE[i][0]+off));
+  for(let i=CAV_IDX[1]; i>=CAV_IDX[0]; i--) chPts.push(new THREE.Vector3(sideSign*0.6, OUTLINE[i][1], -(OUTLINE[i][0]+off)));
+  const chGeo = new THREE.BufferGeometry().setFromPoints(chPts);
+  const chMat = new THREE.LineBasicMaterial({color:C.gold, transparent:true, opacity:.55}); chanMats.push(chMat);
+  const channel = new THREE.LineLoop(chGeo, chMat);
+  channel.userData.isChannel = true; g.add(channel);
+
+  // faixas metalizadas esp. 1mm (topo e base da cavidade, 12mm)
+  [[292.5,302.5,14.2],[99.6,111.6,38.6]].forEach(([y0,y1,r])=>{
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(r+0.4,r+0.4,y1-y0,64,1,true,phiStart,Math.PI), trackMat(mGold(.85)));
+    band.position.y=(y0+y1)/2; g.add(band);
+  });
+
+  // orelhas no plano de junta (z=±) + ilustração dos M8
+  [1,-1].forEach(zs=>{
+    const ear = new THREE.Mesh(new THREE.BoxGeometry(13,26,14), trackMat(mIron()));
+    ear.position.set(sideSign*6.5, 202, zs*106);
+    g.add(ear);
+  });
+
+  // pinos-guia (encaixe perpendicular ao plano de junta) — macho tem pino, fêmea tem furo
+  [1,-1].forEach(zs=>{
+    if(sideSign>0){
+      const pin=new THREE.Mesh(new THREE.CylinderGeometry(5,5,18,24),trackMat(mSteel()));
+      pin.rotation.z=Math.PI/2; pin.position.set(-6,240,zs*72); g.add(pin);
+    }else{
+      const ring=new THREE.Mesh(new THREE.TorusGeometry(5.4,.9,10,32),trackMat(mGold(.9)));
+      ring.rotation.y=Math.PI/2; ring.position.set(-0.4,240,zs*72); g.add(ring);
+    }
+  });
+
+  g.userData.side = sideSign;
+  mold.add(g);
+  reg(g,[sideSign,0,0],150);
+  return g;
+}
+const femHalf = buildHalf(-1);
+const malHalf = buildHalf( 1);
+
+/* baguetes (anéis do colo) — 80/90 BAGUETE MACHO */
+function buildNeckRing(sideSign){
+  const pts=[[12.6,303],[31.2,303],[31.2,314.5],[24,320],[12.6,320]].map(p=>new THREE.Vector2(p[0],p[1]));
+  const phiStart = sideSign<0 ? Math.PI : 0;
+  const g=new THREE.Group();
+  g.add(new THREE.Mesh(new THREE.LatheGeometry(pts,64,phiStart,Math.PI),trackMat(mSteel())));
+  const sh=new THREE.Shape(pts); const f1=new THREE.Mesh(new THREE.ShapeGeometry(sh),trackMat(mSteel()));
+  f1.rotation.y=sideSign<0?Math.PI/2:-Math.PI/2; f1.position.x=sideSign*0.1;
+  const f2=f1.clone(); f2.scale.z=-1; g.add(f1,f2);
+  mold.add(g);
+  reg(g,[sideSign*.55,1,0],95,true);
+  return g;
+}
+const neckF = buildNeckRing(-1), neckM = buildNeckRing(1);
+
+/* fundo (peça inteira, assenta no bolso Ø85.8) */
+const fundo = new THREE.Group();
+const fBody = new THREE.Mesh(new THREE.CylinderGeometry(42.7,42.7,84.6,64), trackMat(mSteel())); fBody.position.y=15+84.6/2;
+const fFlange = new THREE.Mesh(new THREE.CylinderGeometry(52.3,52.3,6,64), trackMat(mSteel())); fFlange.position.y=12;
+const fTop = new THREE.Mesh(new THREE.CylinderGeometry(37.4,37.4,1.2,64), trackMat(mGold(.9))); fTop.position.y=100.1;
+fundo.add(fBody,fFlange,fTop); mold.add(fundo);
+reg(fundo,[0,-1,0],120,true);
+
+/* parafusos laterais M8 (orelhas) */
+const screws=[];
+[1,-1].forEach(zs=>{
+  const s=new THREE.Group();
+  const shaft=new THREE.Mesh(new THREE.CylinderGeometry(4,4,34,20),trackMat(mSteel()));
+  const head=new THREE.Mesh(new THREE.CylinderGeometry(6.6,6.6,6,6),trackMat(mSteel()));
+  shaft.rotation.z=Math.PI/2; head.rotation.z=Math.PI/2; head.position.x=19;
+  s.add(shaft,head); s.position.set(0,202,zs*106); mold.add(s);
+  reg(s,[0,0,zs],70,true); screws.push(s);
+});
+
+/* rede de vácuo — furos Ø6 prof. 228 + inclinados 25° (visíveis no raio-x) */
+const vac = new THREE.Group();
+const vMat = new THREE.MeshStandardMaterial({color:C.gold, emissive:C.goldDk, emissiveIntensity:.5, transparent:true, opacity:0});
+const vGeo = new THREE.CylinderGeometry(3,3,228,10);
+[-1,1].forEach(xs=>{
+  const a0 = xs<0 ? Math.PI*0.62 : -Math.PI*0.38;
+  [48,58,68].forEach((r,ri)=>{
+    for(let k=0;k<7;k++){
+      const a = a0 + (k/6)*Math.PI*0.76;
+      const m=new THREE.Mesh(vGeo,vMat);
+      // furos ficam no lado correspondente à metade (x segue o sinal de xs)
+      m.position.set(Math.abs(Math.sin(a)*r)*xs, 314.5-114, Math.cos(a)*r);
+      vac.add(m);
+      if(ri===1 && k%2===0){ // inclinados 25° encontrando a outra carreira
+        const inc=new THREE.Mesh(new THREE.CylinderGeometry(3,3,60,10),vMat);
+        inc.position.set(m.position.x, 120, m.position.z);
+        inc.rotation.z = xs*0.436; vac.add(inc);
+      }
+    }
+  });
+});
+mold.add(vac);
+/* micro-furos 0.7mm chegando à cavidade (pontos) */
+const dotG=new THREE.BufferGeometry(); const dots=[];
+for(let i=CAV_IDX[0];i<=CAV_IDX[1];i+=2){
+  const r=OUTLINE[i][0]+.6,y=OUTLINE[i][1];
+  for(let a=0;a<Math.PI*2;a+=Math.PI/9){ dots.push(Math.sin(a)*r,y,Math.cos(a)*r); }
+}
+dotG.setAttribute('position',new THREE.Float32BufferAttribute(dots,3));
+const dotM=new THREE.PointsMaterial({color:C.gold,size:2.2,transparent:true,opacity:0});
+const vacDots=new THREE.Points(dotG,dotM); mold.add(vacDots);
+
+/* ================= PARISON — simulação do ciclo de sopro ================= */
+const cavSil=[]; for(let i=CAV_IDX[0];i<=CAV_IDX[1];i++) cavSil.push(new THREE.Vector2(Math.max(OUTLINE[i][0]-1.2,.5),OUTLINE[i][1]));
+const parisonMat=new THREE.MeshPhysicalMaterial({color:0xFF8C42,emissive:0xE05A1E,emissiveIntensity:1.1,transparent:true,opacity:0,roughness:.15,metalness:0,transmission:.2,side:THREE.DoubleSide});
+const parison=new THREE.Mesh(new THREE.LatheGeometry(cavSil,72),parisonMat);
+mold.add(parison);
+let cicloT=-1; // -1 off; 0..1 anima
+
+/* ================= HOTSPOTS ================= */
+const HOTS=[
+ {id:'H01',n:'01',t:'Cavidade — Licor Barrica 750 ml',pos:[0,190,46],cat:'all',
+  specs:[['Prof. cavidade','214,90 ±0,05','doc'],['Ø corpo (junta)','84,05','doc'],['Ø base cavidade','75,10','doc'],['Flecha no centro (fêmea)','0,2','doc'],['Curvatura do barril','reconstruída','inf']],
+  src:'DOC: cotas 214.90±0.05 / 84.05 / Ø75.10 / “FLECHA 0.2 NO CENTRO METADE FEMEA”. INF: raio real do bojo depende do desenho da garrafa — validar no CAD de origem.'},
+ {id:'H02',n:'02',t:'Plano de junta · canal de vácuo',pos:[-2,200,-52],cat:'insp',
+  specs:[['Canal de vácuo','Ø4 × prof. 2','doc'],['Chanfro do colo na junta','2×2','doc'],['Ø no plano','168,1','doc'],['Encaixe guia','19,8 ±0,05 ⊥ junta','doc']],
+  src:'DOC: “CANAL DE VACUO Ø4 COM 2 PROF.” · “CHANFRAR COLO 2X2 NO PLANO DE JUNTA” · “ENCAIXE PERPENDICULAR AO PLANO DE JUNTA”.'},
+ {id:'H03',n:'03',t:'Rede de vácuo (VERT-FLOW)',pos:[60,260,30],cat:'all',
+  specs:[['Furos verticais','3× Ø6 · prof. 228 · R55','doc'],['Tampão','Allen s/ cabeça M8×6','doc'],['Furos inclinados','3× Ø6 a 25°','doc'],['Micro-furos','3 fileiras Ø0,7 → Ø6','doc'],['Posição angular exata','ver plano VFW','inf']],
+  src:'DOC: notas de furação + “FURAR PERPENDICULAR A CAVIDADE”. INF: distribuição angular exibida é ilustrativa — o desenho remete ao “PLANO DE FUROS VFW”.'},
+ {id:'H04',n:'04',t:'Áreas metalizadas',pos:[-40,106,20],cat:'insp',
+  specs:[['Espessura','1 mm','doc'],['Rebaixo p/ metalizar','prof. 1,5 (2 metades)','doc'],['Rebaixo 0,10–0,15','somente macho','doc'],['Liga do depósito','ver desenho tabela','inf']],
+  src:'DOC: “AREA METALIZADA ESP.1mm” · “REBAIXAR PROF.1.5 mm NAS DUAS METADES” · “REBAIXO 0,10 A 0.15 SOMENTE METADE MACHO”. INF: composição na tabela XX de metalização.'},
+ {id:'H05',n:'05',t:'Colo · baguete',pos:[0,318,26],cat:'all',
+  specs:[['Alojamento','Ø62 · M12 · Ø79×12','doc'],['Baguete macho','80 / 90','doc'],['Chanfros','2×90°','doc']],
+  src:'DOC: cotas Ø62 / M12 / 79 / 12 e “80 BAGUETE MACHO · 90 BAGUETE MACHO · 2x90°”.'},
+ {id:'H06',n:'06',t:'Fundo · assento',pos:[0,40,48],cat:'manu',
+  specs:[['Bolso','Ø85,8 +0,025/0','doc'],['Ø flange','105,00','doc'],['Ø ext. base','168,10 ±0,05','doc'],['Alturas','9,5 · 64,70 · 99,60 +0,05','doc']],
+  src:'DOC: seção A-A — Ø85.8+0.025 · Ø105.00 · Ø168.10±0.05 · 99.60+0.05.'},
+ {id:'H07',n:'07',t:'Orelhas de manuseio',pos:[0,202,112],cat:'manu',
+  specs:[['Altura seção','67,6','doc'],['Batente','10,1 ±0,05','doc'],['Ressalto','5 0/−0,02 · 5° · R1,6','doc']],
+  src:'DOC: “SEÇÃO ORELHA-ORELHA ESCALA 1.3:1”.'},
+ {id:'H08',n:'08',t:'Detalhe B · trava M6',pos:[-30,285,-40],cat:'manu',
+  specs:[['Operação','soldar Allen M6 ponta oval','doc'],['Posição','R 65,07 · Ø12/Ø12,5','doc'],['Torque de aperto','n/ especificado','inf']],
+  src:'DOC: “SOLDAR PARAFUSO ALLEM M6 COM PONTA OVAL” · B(1:1). INF: torque não consta — definir na FISPQ de montagem.'},
+ {id:'H09',n:'09',t:'Corpo Ø202 · material',pos:[85,150,-40],cat:'all',
+  specs:[['Material','FoFo Cinzento “Q3”','doc'],['Ø externo','202','doc'],['Altura total','314,5','doc'],['Massa estim./metade','≈ 31 kg','inf'],['Acabamento geral','Ra 6,3 (n/e)','doc']],
+  src:'DOC: legenda + “MATERIAL: FERRO FUNDIDO CINZENTO Q3”. INF: massa calculada da geometria reconstruída (ρ=7,2 g/cm³) — não consta no desenho.'},
+];
+const sprites=[];
+function spriteTex(n,light){
+  const cv=document.createElement('canvas');cv.width=cv.height=96;const g=cv.getContext('2d');
+  g.beginPath();g.arc(48,48,30,0,7);
+  g.fillStyle = light?'rgba(255,255,255,.94)':'rgba(10,11,13,.85)';g.fill();
+  g.lineWidth=3;g.strokeStyle = light?'#7A6230':'#C4A468';g.stroke();
+  g.fillStyle = light?'#4A3C1C':'#C4A468';
+  g.font='600 26px JetBrains Mono,monospace';g.textAlign='center';g.textBaseline='middle';g.fillText(n,48,50);
+  return new THREE.CanvasTexture(cv);
+}
+function mkSprite(h){
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:spriteTex(h.n,false),transparent:true,depthTest:false}));
+  sp.scale.set(22,22,1);sp.position.set(...h.pos);sp.userData.hot=h;mold.add(sp);sprites.push(sp);
+}
+HOTS.forEach(mkSprite);
+
+/* ================= FASES DE SCROLL ================= */
+const PHASES=[
+ {t:'Ferramental montado',ph:'FASE 01 / 07',cam:{r:640,az:.55,el:.32,ty:20},
+  p:'Molde de sopro em FoFo cinzento Q3, Ø202 mm, altura 314,5 mm. Metades fêmea e macho fechadas no plano de junta. Arraste para girar, toque nos marcadores numerados.',
+  n:'COTAS SEM TOLERÂNCIA ±0,1 mm · USINAGEM N/E Ra 6,3'},
+ {t:'Abertura no plano de junta',ph:'FASE 02 / 07',cam:{r:700,az:.25,el:.28,ty:20},
+  p:'As metades se separam revelando a cavidade da barrica. Faces de junta com hachura idêntica ao desenho 2D — cada superfície aqui corresponde a uma seção da prancha.',
+  n:'ENCAIXE-GUIA 19,8 ±0,05 PERPENDICULAR AO PLANO DE JUNTA'},
+ {t:'Face de junta · canal de vácuo Ø4',ph:'FASE 03 / 07',cam:{r:520,az:1.35,el:.12,ty:40},
+  p:'O canal dourado contorna a cavidade: vácuo distribuído no fechamento. Chanfro do colo 2×2 executado no próprio plano de junta.',
+  n:'“CANAL DE VACUO Ø4 COM 2 PROF.” — NOTA LITERAL DO DESENHO'},
+ {t:'Raio-X · rede VERT-FLOW',ph:'FASE 04 / 07',cam:{r:660,az:-.9,el:.42,ty:40},
+  p:'O corpo fica translúcido e expõe a rede interna: furos Ø6 com 228 mm de profundidade no R55, carreira inclinada a 25° interceptando a vertical, e 3 fileiras de micro-furos Ø0,7 mm respirando na cavidade.',
+  n:'TAMPADOS COM PARAFUSO ALLEN SEM CABEÇA M8×6'},
+ {t:'Ciclo de sopro (simulação)',ph:'FASE 05 / 07',cam:{r:560,az:.4,el:.2,ty:30},
+  p:'O parison incandescente entra pelo colo, infla contra a cavidade e o vácuo puxa o vidro contra a parede metalizada. A cor esfria de laranja para o verde-garrafa conforme o contato.',
+  n:'SIMULAÇÃO DIDÁTICA — TEMPOS REAIS DEPENDEM DA MÁQUINA 6¼"'},
+ {t:'Explosão total do ferramental',ph:'FASE 06 / 07',cam:{r:860,az:.7,el:.34,ty:10},
+  p:'Baguetes sobem, fundo desce, parafusos M8 saem pelas orelhas. Cada componente carrega sua ficha com proveniência: cota DOCUMENTADA no desenho ou INFERIDA na reconstrução.',
+  n:'TOQUE EM QUALQUER MARCADOR PARA ABRIR A FICHA'},
+ {t:'Ficha viva · Zero-Inference',ph:'FASE 07 / 07',cam:{r:760,az:1.05,el:.5,ty:10},
+  p:'84% das cotas exibidas citam a nota literal da prancha; 16% estão marcadas como inferidas e apontam o documento que falta (plano VFW, tabela de metalização, CAD de origem). O gêmeo nunca finge saber o que o papel não diz.',
+  n:'A16 01PA 0004 OOG · REV 0 · DES MENEGASSI · 10-MAI-2026'},
+];
+const rail=document.getElementById('rail');
+PHASES.forEach((p,i)=>{
+  const d=document.createElement('div');d.className='tick';d.dataset.t=p.t;
+  d.onclick=()=>{scrollTo({top:(i/(PHASES.length-1))*(document.body.scrollHeight-innerHeight),behavior:'smooth'})};
+  rail.appendChild(d);
+});
+const ticks=[...rail.children];
+
+/* ================= TEMA CLARO / ESCURO ================= */
+/* Claro = leitura de prancheta (hachura escura sobre branco, ferro em cinza-médio).
+   Escuro = sala de operação (menos fadiga sob luz baixa no chão de fábrica).      */
+const THEME = {
+  dark : {bg:0x0A0B0D, fog:[900,2100], iron:0x2B2F36, hatch:0xBFC4CC, steel:0x8A8F98,
+          gold:0xC4A468, amb:[0x404550,1.10], key:[0xFFF4E0,1.00], rim:[0x6E86B0,.55], und:.35},
+  light: {bg:0xE7E8E3, fog:[1000,2400], iron:0x767D87, hatch:0xFFFFFF, steel:0xA7ADB5,
+          gold:0x8A6E32, amb:[0xBFC6CE,1.55], key:[0xFFFFFF,.95], rim:[0x9AA8BC,.40], und:.20}
+};
+let isLight=false;
+function applyTheme(light){
+  isLight=light; const T = light?THEME.light:THEME.dark;
+  document.body.classList.toggle('light',light);
+  scene.background.setHex(T.bg); scene.fog.color.setHex(T.bg);
+  scene.fog.near=T.fog[0]; scene.fog.far=T.fog[1];
+  HTX = light?HTX_L:HTX_D;
+  allMats.forEach(m=>{
+    const r=m.userData.role;
+    if(r==='iron') m.color.setHex(T.iron);
+    else if(r==='steel') m.color.setHex(T.steel);
+    else if(r==='gold') m.color.setHex(T.gold);
+    else if(r==='hatch'){
+      m.color.setHex(T.hatch);
+      const t=HTX.clone(); t.wrapS=t.wrapT=THREE.RepeatWrapping;
+      t.repeat.set(1/16,1/16); t.needsUpdate=true;
+      if(m.map) m.map.dispose(); m.map=t;
+    }
+    m.needsUpdate=true;
+  });
+  chanMats.forEach(m=>m.color.setHex(T.gold));
+  vMat.color.setHex(T.gold); vMat.emissive.setHex(light?0x6B5424:C.goldDk);
+  dotM.color.setHex(light?0x5E4A1E:C.gold); dotM.size = light?2.6:2.2;
+  sprites.forEach(sp=>{ sp.material.map.dispose(); sp.material.map=spriteTex(sp.userData.hot.n,light); sp.material.needsUpdate=true; });
+  scene.children.forEach(o=>{
+    if(o.isAmbientLight){o.color.setHex(T.amb[0]);o.intensity=T.amb[1];}
+    if(o===key){o.color.setHex(T.key[0]);o.intensity=T.key[1];}
+    if(o===rim){o.color.setHex(T.rim[0]);o.intensity=T.rim[1];}
+    if(o===under){o.color.setHex(T.gold);o.intensity=T.und;}
+  });
+  const b=document.getElementById('bTheme');
+  b.textContent = light?'◑ MODO ESCURO':'◐ MODO CLARO';
+  b.classList.toggle('on',light);
+}
+
+/* ================= ESTADO / CONTROLES ================= */
+let userAz=0,userEl=0,autoRot=false,xray=false,cicloOn=false;
+let visF=true,visM=true;
+let curPhase=-1;
+
+const $=id=>document.getElementById(id);
+function toggle(btn,fn){btn.onclick=()=>{btn.classList.toggle('on');fn(btn.classList.contains('on'))}}
+toggle($('bF'),v=>{visF=v});
+toggle($('bM'),v=>{visM=v});
+toggle($('bSec'),v=>{clippingOn=v;allMats.forEach(m=>{m.clippingPlanes=v?[clipPlane]:null;m.needsUpdate=true})});
+toggle($('bXr'),v=>{xray=v});
+toggle($('bRot'),v=>{autoRot=v});
+$('bTheme').onclick=()=>applyTheme(!isLight);
+applyTheme(matchMedia('(prefers-color-scheme: light)').matches);
+
+function setCiclo(on){
+  cicloOn=on; cicloT=on?0:-1;
+  $('bCiclo').classList.toggle('on',on);
+  $('bCiclo').textContent=on?'■ PARAR CICLO':'▶ CICLO DE SOPRO';
+}
+$('bReset').onclick=()=>{userAz=userEl=0;scrollTo({top:0,behavior:'smooth'});closeCard();$('mlist').classList.remove('show');
+  ['bSec','bXr','bRot','bInsp','bManu'].forEach(i=>$(i).classList.remove('on'));
+  ['bF','bM'].forEach(i=>$(i).classList.add('on'));visF=visM=true;xray=autoRot=clippingOn=false;
+  setCiclo(false);
+  allMats.forEach(m=>{m.clippingPlanes=null;m.needsUpdate=true});modeCat='all2';applyMode()};
+$('bCiclo').onclick=()=>setCiclo(!cicloOn);
+
+let modeCat='all2';
+function applyMode(){
+  sprites.forEach(s=>{const c=s.userData.hot.cat;
+    s.visible = modeCat==='all2' ? true : (c===modeCat||c==='all');});
+  $('mlist').classList.toggle('show',modeCat==='manu');
+}
+$('bInsp').onclick=()=>{const on=$('bInsp').classList.toggle('on');$('bManu').classList.remove('on');
+  modeCat=on?'insp':'all2';applyMode()};
+$('bManu').onclick=()=>{const on=$('bManu').classList.toggle('on');$('bInsp').classList.remove('on');
+  modeCat=on?'manu':'all2';applyMode()};
+
+/* ordem de desmontagem */
+const MSTEPS=[
+ ['1','Remover baguetes do colo','travas M6 ponta oval soldadas — verificar antes'],
+ ['2','Soltar parafusos M8 das orelhas','Allen · 2 pontos por lado'],
+ ['3','Abrir metades no plano de junta','içar pelas orelhas · nunca pela cavidade'],
+ ['4','Sacar o fundo por baixo','bolso Ø85,8 +0,025 — ajuste fino, usar extrator'],
+ ['5','Inspecionar metalização','esp. 1 mm topo/base · rebaixo 0,10–0,15 só no macho'],
+];
+const msDiv=$('msteps');
+MSTEPS.forEach(([n,t,d],i)=>{
+  const e=document.createElement('div');e.className='mstep';
+  e.innerHTML=`<span class="n">${n}</span><span>${t}<span class="torque">${d}</span></span>`;
+  e.onclick=()=>{[...msDiv.children].forEach(c=>c.classList.remove('act'));e.classList.add('act');
+    const tgt=(i+1)/MSTEPS.length*0.9;scrollTo({top:tgt*(document.body.scrollHeight-innerHeight),behavior:'smooth'})};
+  msDiv.appendChild(e);
+});
+
+/* spec card */
+function openCard(h){
+  $('cId').textContent=h.id+' · '+(h.specs.some(s=>s[2]==='inf')?'PROVENIÊNCIA MISTA':'100% DOCUMENTADO');
+  $('cTitle').textContent=h.t;
+  $('cSpecs').innerHTML=h.specs.map(([k,v,b])=>
+    `<div class="spec"><span class="k">${k}</span><span class="v">${v}<span class="badge ${b}">${b==='doc'?'DOC':'INF'}</span></span></div>`).join('');
+  $('cSrc').innerHTML='<b>FONTE ›</b> '+h.src;
+  $('card').classList.add('show');
+}
+function closeCard(){$('card').classList.remove('show')}
+$('cardX').onclick=closeCard;
+
+/* ================= INTERAÇÃO (drag / raycast) ================= */
+const ray=new THREE.Raycaster(); const ptr=new THREE.Vector2();
+let dragging=false,px=0,py=0,moved=0,touchMode=null;
+const cvs=renderer.domElement;
+cvs.style.touchAction='pan-y';
+cvs.addEventListener('pointerdown',e=>{dragging=true;moved=0;px=e.clientX;py=e.clientY;touchMode=null});
+addEventListener('pointermove',e=>{
+  if(!dragging)return;
+  const dx=e.clientX-px,dy=e.clientY-py;
+  if(e.pointerType==='touch'&&touchMode===null&&(Math.abs(dx)>6||Math.abs(dy)>6))
+    touchMode=Math.abs(dx)>Math.abs(dy)?'rot':'scroll';
+  if(e.pointerType==='touch'&&touchMode==='scroll')return;
+  moved+=Math.abs(dx)+Math.abs(dy);
+  userAz+=dx*0.006; userEl=THREE.MathUtils.clamp(userEl+dy*0.004,-0.9,0.9);
+  px=e.clientX;py=e.clientY;
+});
+addEventListener('pointerup',e=>{
+  if(dragging&&moved<6){
+    ptr.x=(e.clientX/innerWidth)*2-1; ptr.y=-(e.clientY/innerHeight)*2+1;
+    ray.setFromCamera(ptr,camera);
+    const hit=ray.intersectObjects(sprites.filter(s=>s.visible));
+    if(hit.length)openCard(hit[0].object.userData.hot);
+  }
+  dragging=false;
+});
+
+/* ================= LOOP ================= */
+const cap={ph:$('capPh'),h:$('capH'),p:$('capP'),n:$('capN')};
+const ease=t=>t<0?0:t>1?1:t*t*(3-2*t);
+const clock=new THREE.Clock();
+
+function setCaption(i){
+  if(i===curPhase)return;curPhase=i;const P=PHASES[i];
+  [cap.ph,cap.h,cap.p,cap.n].forEach(e=>e.style.opacity=0);
+  setTimeout(()=>{cap.ph.textContent=P.ph;cap.h.textContent=P.t;cap.p.textContent=P.p;cap.n.textContent=P.n;
+    [cap.ph,cap.h,cap.p,cap.n].forEach(e=>e.style.opacity=1)},180);
+  ticks.forEach((t,k)=>t.classList.toggle('on',k===i));
+  $('scrollhint').style.opacity=i===0?1:0;
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+  const dt=Math.min(clock.getDelta(),.05), T=clock.elapsedTime;
+  const doc=document.body.scrollHeight-innerHeight;
+  const sp=doc>0?scrollY/doc:0;
+  const fN=PHASES.length;
+  const fPos=sp*(fN-1);
+  const fi=Math.min(Math.floor(fPos+0.0001),fN-1);
+  setCaption(Math.round(fPos));
+
+  /* progresso por fase */
+  const pOpen  = ease((fPos-0.4)/1.0);          // separação das metades
+  const pXrayS = ease((fPos-2.6)/0.8);          // raio-x na fase 4
+  const pCiclo = ease((fPos-3.5)/0.5)*(1-ease((fPos-4.55)/0.4)); // janela: só na fase 5
+  const pFull  = ease((fPos-4.6)/1.0);          // explosão total
+
+  /* explosão */
+  parts.forEach(P=>{
+    const f = P.sub ? pFull : Math.max(pOpen, pFull*1.1);
+    P.obj.position.copy(P.home).addScaledVector(P.dir, P.dist*Math.min(f,1.15));
+  });
+  femHalf.visible=visF; malHalf.visible=visM; neckF.visible=visF; neckM.visible=visM;
+
+  /* raio-x */
+  const bodyOp = 1-0.72*Math.max(xray?1:0, pXrayS);
+  [femHalf,malHalf].forEach(h=>h.traverse(o=>{
+    if(o.isMesh&&o.material){o.material.transparent=bodyOp<1;o.material.opacity=bodyOp;}
+  }));
+  vMat.opacity += ((Math.max(xray?1:0,pXrayS))-vMat.opacity)*0.1;
+  dotM.opacity = vMat.opacity;
+
+  /* canal de vácuo pulsando na fase 3 */
+  const chGlow = 0.35+0.5*Math.abs(Math.sin(T*2.2));
+  mold.traverse(o=>{if(o.userData.isChannel)o.material.opacity=(fi===2?chGlow:0.4)});
+
+  /* ciclo de sopro */
+  const cicloActive = cicloOn || pCiclo>0.02;
+  if(cicloActive){
+    if(cicloT<0)cicloT=0;
+    cicloT=(cicloT+dt*0.35)%1;
+    const s=0.22+0.78*ease(Math.min(cicloT*1.6,1));
+    parison.scale.set(s,1,s);
+    const cool=ease((cicloT-0.55)/0.4);
+    parisonMat.color.setHex(cool>0.5?0x3E7A5E:0xFF8C42);
+    parisonMat.emissiveIntensity=1.2*(1-cool);
+    parisonMat.opacity=0.92*(cicloT<0.94?1:(1-(cicloT-0.94)/0.06));
+    heatLight.intensity=2.2*(1-cool);
+  }else{parisonMat.opacity+=(0-parisonMat.opacity)*0.1;heatLight.intensity*=0.9;cicloT=-1;}
+
+  /* câmera — interpola entre fases + offset do usuário */
+  const a=PHASES[Math.min(fi,fN-1)].cam, b=PHASES[Math.min(fi+1,fN-1)].cam, m=ease(fPos-fi);
+  const L=(k)=>a[k]+(b[k]-a[k])*m;
+  if(autoRot)userAz+=dt*0.25;
+  const az=L('az')+userAz, el=THREE.MathUtils.clamp(L('el')+userEl,-1.1,1.2), r=L('r');
+  camera.position.set(Math.sin(az)*Math.cos(el)*r, Math.sin(el)*r+L('ty'), Math.cos(az)*Math.cos(el)*r);
+  camera.lookAt(0,L('ty'),0);
+
+  renderer.render(scene,camera);
+}
+animate();
+
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body>
+</html>
