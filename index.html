@@ -657,6 +657,14 @@ const cap={ph:$('capPh'),h:$('capH'),p:$('capP'),n:$('capN')};
 const ease=t=>t<0?0:t>1?1:t*t*(3-2*t);
 const clock=new THREE.Clock();
 
+/* em retrato o FOV horizontal encolhe (FOV vertical é fixo) — recua a câmera para o molde continuar cabendo */
+let camMul=1;
+function updateCamMul(){
+  const asp=innerWidth/innerHeight;
+  camMul = asp>=1 ? 1 : THREE.MathUtils.clamp(1+(1-asp)*0.55, 1, 1.55);
+}
+updateCamMul();
+
 function setCaption(i){
   if(i===curPhase)return;curPhase=i;const P=PHASES[i];
   [cap.ph,cap.h,cap.p,cap.n].forEach(e=>e.style.opacity=0);
@@ -727,18 +735,11 @@ function animate(){
 }
 animate();
 
-/* em retrato o FOV horizontal encolhe (FOV vertical é fixo) — recua a câmera para o molde continuar cabendo */
-let camMul=1;
-function updateCamMul(){
-  const asp=innerWidth/innerHeight;
-  camMul = asp>=1 ? 1 : THREE.MathUtils.clamp(1+(1-asp)*0.55, 1, 1.55);
-}
 function onResize(){
   camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight);
   updateCamMul();
 }
-updateCamMul();
 addEventListener('resize',onResize);
 addEventListener('orientationchange',onResize);
 </script>
